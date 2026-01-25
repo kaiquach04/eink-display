@@ -11,7 +11,7 @@ draw= ImageDraw.Draw(img)
 
 font = ImageFont.truetype(FredokaOne, 48)
 
-message = "Hello, World!"
+message = "Hello, Emily!"
 _, _, w, h = font.getbbox(message)
 x = (inky_display.width / 2) - (w / 2)
 y = (inky_display.height / 2) - (h / 2)
