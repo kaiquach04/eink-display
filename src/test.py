@@ -1,5 +1,5 @@
 from inky.auto import auto
-from PIL import Image, Imagefont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw
 from font_fredoka_one import FredokaOne
 
 
@@ -9,6 +9,7 @@ inky_display = auto()
 img = Image.new("P", (inky_display.width, inky_display.height), inky_display.WHITE)
 draw= ImageDraw.Draw(img)
 
+font = ImageFont.truetype(FredokaOne, 48)
 
 message = "Hello, World!"
 _, _, w, h = font.getbbox(message)
