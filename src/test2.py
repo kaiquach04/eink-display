@@ -5,6 +5,6 @@ from font_fredoka_one import FredokaOne
 
 inky_display = auto()
 
-img = Image.open("../public/em.jpg")
+img = Image.open("../public/em.JPG")
 inky_display.set_image(img)
 inky_display.show()
