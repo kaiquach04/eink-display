@@ -1,0 +1,3 @@
+Pillow>=10.0
+font-fredoka-one
+Flask>=3.0
