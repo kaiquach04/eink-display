@@ -16,7 +16,7 @@ def render(width: int, height: int) -> Image.Image:
 
     # Demo content (replace later with calendar data)
     now = time.strftime("%a %b %d, %I:%M:%S %p")
-    title = "Inky Dashboard Preview"
+    title = "E-ink Calendar"
     subtitle = f"Local time: {now}"
 
     draw.text((24, 14), title, fill="black", font=font2)
