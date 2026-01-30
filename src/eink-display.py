@@ -120,18 +120,49 @@ def render(width: int, height: int) -> Image.Image:
 
       draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=CREAM, width=1) # Creates the vertical line for the time_frame
       
-      for i in range(16): # Creates all of the rows necessary for time_frame
-        h = i * ROW_H 
+      for i, time in enumerate(time_frame): # Creates all of the rows necessary for time_frame
+        h = (i * ROW_H) + HEADER_H 
 
         if i > 0:
-          draw.line([(0, h + HEADER_H), (width, h + HEADER_H)], fill=CREAM, width=1)
-        
-      # for i, time in enumerate(time_frame):
-      #     y_start = i * ROW_HEIGHT
-          
-      #     draw.line([()])
+          draw.line([(0, h), (width, h)], fill=CREAM, width=1)
+
+
+        text_center_y = (h + (ROW_H / 2)) + ROW_H 
+        draw.text((TIME_W / 2, text_center_y), time, fill=CREAM, font=timeFont, anchor="mm") 
+
+      # Create bottom line for row
+      bottom_line_y = HEADER_H + (15 * ROW_H)
+      draw.line([(0, bottom_line_y), (width, bottom_line_y)], fill=CREAM, width=1) 
 
       today_name = dt.datetime.now().strftime("%A")
+      # Creates the rest of the vertical lines for days
+      for i, d in enumerate(days):
+        x_start = (i * DAY_W) + TIME_W
+        text_center_x = (x_start + (DAY_W / 2)) 
+        if i > 0:
+          draw.line([(x_start, HEADER_H), (x_start, height)], fill=CREAM, width=1)
+        if d == today_name: 
+          # Draw the highlight rectangle
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=CREAM)
+          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=BLUE, font=font2, anchor="ms")
+        else:
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BLUE, outline=CREAM)
+          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=CREAM, font=font2, anchor="ms")
+
+        y_offset = HEADER_H + 45
+        day_events = events_by_day.get(d, [])
+
+        for event in day_events:
+          if y_offset > height - 20:
+            break
+
+          if not event["is_all_day"]:
+            time_str = f"{event["start"].replace(" AM", "a").replace(" PM", "p")} - {event["end"].replace(" AM", "a").replace(" PM", "p")}"
+            draw.text((text_center_x, y_offset), time_str, font=timeFont, fill=CREAM, anchor="ms")
+            y_offset += 15
+          
+          
+
 
       # for i, d in enumerate(days):
       #   x_start = i * COLUMN_WIDTH
