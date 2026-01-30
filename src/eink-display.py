@@ -1,35 +1,149 @@
+import os.path
+import datetime as dt
 import io
 import time
+from dotenv import load_dotenv
 from flask import Flask, Response
 from PIL import Image, ImageDraw, ImageFont
 from font_fredoka_one import FredokaOne
-app = Flask(__name__)
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from collections import defaultdict
 
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
+app = Flask(__name__)
+load_dotenv()
+CALENDAR_ID = os.getenv("KAI_EM_CALENDAR_ID")
 WIDTH, HEIGHT = 800, 480  # Inky Impression 7.3"
+HEADER_HEIGHT = 50
+
+COLUMN_WIDTH = WIDTH/ 7
+
+def format_event_time(time_str):
+    if not time_str:
+        return ""
+    
+    if len(time_str) <= 10:
+        return "All Day"
+    
+    dt_obj = dt.datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+    return dt_obj.strftime("%I:%M %p")
 
 def render(width: int, height: int) -> Image.Image:
-    img = Image.new("RGB", (width, height), "white")
-    draw = ImageDraw.Draw(img)
-    font = ImageFont.load_default()
-    font_path = FredokaOne
-    font2 = ImageFont.truetype(font_path, size=15)
+  creds = None
 
-    # Demo content (replace later with calendar data)
-    now = time.strftime("%a %b %d, %I:%M:%S %p")
-    title = "E-ink Calendar"
-    subtitle = f"Local time: {now}"
+  if os.path.exists("token.json"):
+      creds = Credentials.from_authorized_user_file("token.json")
 
-    draw.text((24, 14), title, fill="black", font=font2)
-    draw.text((36, 54), subtitle, fill="black", font=font)
+  if not creds or not creds.valid:
+      if creds and creds.expired and creds.refresh_token:
+          creds.refresh(Request())
+      else:
+          flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+          creds = flow.run_local_server(port=0)
 
-    # Simple layout boxes to help you design
-    draw.rectangle([24, 40, 776, 456], outline="black", width=2)
-    draw.text((36, 74), "Calendar block goes here", fill="black", font=font)
+          with open("token.json", "w") as token:
+              token.write(creds.to_json())
 
-    # draw.rectangle([24, 250, 776, 456], outline="black", width=2)
-    # draw.text((36, 262), "Other widgets go here", fill="black", font=font)
+  try:
+      service = build("calendar", "v3", credentials=creds)
 
-    return img
+      today = dt.datetime.now(dt.UTC)
+      days_since_monday = today.weekday()
+      start_of_week = today - dt.timedelta (days=days_since_monday)
+      start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+      end_of_week= start_of_week + dt.timedelta(days=6)
+      end_of_week = end_of_week.replace(hour=23, minute=59, second=59, microsecond=0)
+
+      timeMin = start_of_week.isoformat().replace("+00:00", "Z")
+      timeMax = end_of_week.isoformat().replace("+00:00", "Z")
+
+      event_result = service.events().list(calendarId=CALENDAR_ID, timeMin=timeMin, timeMax=timeMax, singleEvents=True, orderBy="startTime").execute()
+      events = event_result.get("items", [])
+
+      if not events:
+          print("no upcoming events found")
+          return
+      
+      weekly_list = []
+      for event in events:
+          start = event["start"].get("dateTime") or event["start"].get("date")
+          end = event["end"].get("dateTime") or event["end"].get("date")
+          summary = event.get("summary", "(No Title)")
+
+          event_date = dt.datetime.fromisoformat(start[:10])
+          weekly_list.append({
+                  "day": event_date.strftime("%A"),
+                  "start": format_event_time(start),
+                  "end": format_event_time(end),
+                  "summary": summary,
+                  "is_all_day": "dateTime" not in event["start"]
+              })
+      # print(f"DEBUG: Found {len(weekly_list)} events in the weekly_list.")
+      # for e in weekly_list:
+      #     print(f" - {e['day']}: {e['summary']}")
+
+      img = Image.new("RGB", (width, height), "white")
+      draw = ImageDraw.Draw(img)
+      font_path = FredokaOne
+      font2 = ImageFont.truetype(font_path, size=15)
+      timeFont = ImageFont.truetype(font_path, size=10)
+
+      # Simple layout boxes to help you design
+      events_by_day = defaultdict(list)
+      for event in weekly_list:
+          events_by_day[event["day"]].append(event)
+      
+      days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      draw.rectangle([0, 0, width, HEADER_HEIGHT], fill="black") # outline="black", width=2
+      week_range = f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
+      draw.text((20, 15), "Kai + Em Calendar", fill="white", font=font2)
+      draw.text((WIDTH - 20, 15), week_range, fill="white", font=font2, anchor="ra")
+
+      for i, d in enumerate(days):
+        x_start = i * COLUMN_WIDTH
+        center_x = x_start + (COLUMN_WIDTH / 2)
+        
+        if i > 0:
+            draw.line([(x_start, HEADER_HEIGHT), (x_start, HEIGHT)], fill="black", width=1)
+
+        draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline="black")
+        draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill="black", font=font2, anchor="ms")
+
+        y_offset = HEADER_HEIGHT + 45
+        day_events = events_by_day.get(d, [])
+
+        for event in day_events:
+          # Stop drawing if we hit the bottom of the screen
+          if y_offset > HEIGHT - 20:
+              draw.text((center_x, y_offset), "...", font=timeFont, anchor="ms")
+              break
+              
+          # Draw Time (e.g., 12:05p)
+          if not event["is_all_day"]:
+              time_str = event["start"].replace(" AM", "a").replace(" PM", "p")
+              draw.text((center_x, y_offset), time_str, fill="black", font=timeFont, anchor="ms")
+              y_offset += 15 # Small gap between time and title
+              
+          # Draw Summary (Truncated to fit column)
+          # With full screen, you likely have ~15-18 chars of room
+          summary = event["summary"]
+          if len(summary) > 18:
+              summary = summary[:16] + ".."
+              
+          draw.text((center_x, y_offset), summary, fill="black", font=timeFont, anchor="ms")
+          
+          # Gap before the next event
+          y_offset += 35
+
+      return img
+
+  except HttpError as error:
+      print("An error occurred:", error)
 
 @app.get("/")
 def index():
