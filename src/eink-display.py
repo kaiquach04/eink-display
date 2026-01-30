@@ -17,36 +17,51 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 app = Flask(__name__)
 load_dotenv()
 CALENDAR_ID = os.getenv("KAI_EM_CALENDAR_ID")
-WIDTH, HEIGHT = 800, 480  # Inky Impression 7.3"
-HEADER_HEIGHT = 50
 
-COLUMN_WIDTH = WIDTH/ 7
+# holy measurements
+WIDTH, HEIGHT = 800, 480  # Inky Impression 7.3"
+HEADER_H = 50
+TIME_W = 50
+GRID_Y0 = 50 #TOP OF GRID AREA
+GRID_H = HEIGHT - HEADER_H
+DAY_X0 = 50 #START OF DAY AREA
+DAY_W_TOTAL = WIDTH - TIME_W
+
+ROW_H = 430 / 16
+DAY_W = 750 / 7
+
+BLUE = "#212842"
+CREAM = "#F0E7D5"
+MIDNIGHT = "#181C30"
+SAGE = "#8FAF9A"     # muted green (calm, natural accent)
+CLAY = "#C47A5A"     # soft terracotta (warm highlight / CTA)
+SLATE = "#6E7387"    # cool gray-blue (neutral text, borders)
 
 def format_event_time(time_str):
-    if not time_str:
-        return ""
-    
-    if len(time_str) <= 10:
-        return "All Day"
-    
-    dt_obj = dt.datetime.fromisoformat(time_str.replace("Z", "+00:00"))
-    return dt_obj.strftime("%I:%M %p")
+  if not time_str:
+    return ""
+  
+  if len(time_str) <= 10:
+    return "All Day"
+  
+  dt_obj = dt.datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+  return dt_obj.strftime("%I:%M %p")
 
 def render(width: int, height: int) -> Image.Image:
   creds = None
 
   if os.path.exists("token.json"):
-      creds = Credentials.from_authorized_user_file("token.json")
+    creds = Credentials.from_authorized_user_file("token.json")
 
   if not creds or not creds.valid:
-      if creds and creds.expired and creds.refresh_token:
-          creds.refresh(Request())
-      else:
-          flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-          creds = flow.run_local_server(port=0)
+    if creds and creds.expired and creds.refresh_token:
+      creds.refresh(Request())
+    else:
+      flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+      creds = flow.run_local_server(port=0)
 
-          with open("token.json", "w") as token:
-              token.write(creds.to_json())
+      with open("token.json", "w") as token:
+          token.write(creds.to_json())
 
   try:
       service = build("calendar", "v3", credentials=creds)
@@ -66,79 +81,96 @@ def render(width: int, height: int) -> Image.Image:
       events = event_result.get("items", [])
 
       if not events:
-          print("no upcoming events found")
-          return
+        print("no upcoming events found")
+        return
       
       weekly_list = []
       for event in events:
-          start = event["start"].get("dateTime") or event["start"].get("date")
-          end = event["end"].get("dateTime") or event["end"].get("date")
-          summary = event.get("summary", "(No Title)")
+        start = event["start"].get("dateTime") or event["start"].get("date")
+        end = event["end"].get("dateTime") or event["end"].get("date")
+        summary = event.get("summary", "(No Title)")
 
-          event_date = dt.datetime.fromisoformat(start[:10])
-          weekly_list.append({
-                  "day": event_date.strftime("%A"),
-                  "start": format_event_time(start),
-                  "end": format_event_time(end),
-                  "summary": summary,
-                  "is_all_day": "dateTime" not in event["start"]
-              })
-      # print(f"DEBUG: Found {len(weekly_list)} events in the weekly_list.")
-      # for e in weekly_list:
-      #     print(f" - {e['day']}: {e['summary']}")
+        event_date = dt.datetime.fromisoformat(start[:10])
+        weekly_list.append({
+          "day": event_date.strftime("%A"),
+          "start": format_event_time(start),
+          "end": format_event_time(end),
+          "summary": summary,
+          "is_all_day": "dateTime" not in event["start"]
+        })
 
-      img = Image.new("RGB", (width, height), "white")
+      img = Image.new("RGB", (width, height), MIDNIGHT) # Creates the background
       draw = ImageDraw.Draw(img)
+      draw.rectangle([0, 0, width, HEADER_H], fill=BLUE) # Header
       font_path = FredokaOne
       font2 = ImageFont.truetype(font_path, size=15)
       timeFont = ImageFont.truetype(font_path, size=10)
 
-      # Simple layout boxes to help you design
       events_by_day = defaultdict(list)
       for event in weekly_list:
-          events_by_day[event["day"]].append(event)
-      
+        events_by_day[event["day"]].append(event)
+
+
       days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-      draw.rectangle([0, 0, width, HEADER_HEIGHT], fill="black") # outline="black", width=2
+      time_frame = ["all-day", "7am", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm", "8pm"]
       week_range = f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
-      draw.text((20, 15), "Kai + Em Calendar", fill="white", font=font2)
-      draw.text((WIDTH - 20, 15), week_range, fill="white", font=font2, anchor="ra")
 
-      for i, d in enumerate(days):
-        x_start = i * COLUMN_WIDTH
-        center_x = x_start + (COLUMN_WIDTH / 2)
-        
+      draw.text((20, 15), "Kai + Em Calendar", fill=CREAM, font=font2)
+      draw.text((WIDTH - 20, 15), week_range, fill=CREAM, font=font2, anchor="ra")
+
+      draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=CREAM, width=1) # Creates the vertical line for the time_frame
+      
+      for i in range(16): # Creates all of the rows necessary for time_frame
+        h = i * ROW_H 
+
         if i > 0:
-            draw.line([(x_start, HEADER_HEIGHT), (x_start, HEIGHT)], fill="black", width=1)
-
-        draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline="black")
-        draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill="black", font=font2, anchor="ms")
-
-        y_offset = HEADER_HEIGHT + 45
-        day_events = events_by_day.get(d, [])
-
-        for event in day_events:
-          # Stop drawing if we hit the bottom of the screen
-          if y_offset > HEIGHT - 20:
-              draw.text((center_x, y_offset), "...", font=timeFont, anchor="ms")
-              break
-              
-          # Draw Time (e.g., 12:05p)
-          if not event["is_all_day"]:
-              time_str = event["start"].replace(" AM", "a").replace(" PM", "p")
-              draw.text((center_x, y_offset), time_str, fill="black", font=timeFont, anchor="ms")
-              y_offset += 15 # Small gap between time and title
-              
-          # Draw Summary (Truncated to fit column)
-          # With full screen, you likely have ~15-18 chars of room
-          summary = event["summary"]
-          if len(summary) > 18:
-              summary = summary[:16] + ".."
-              
-          draw.text((center_x, y_offset), summary, fill="black", font=timeFont, anchor="ms")
+          draw.line([(0, h + HEADER_H), (width, h + HEADER_H)], fill=CREAM, width=1)
+        
+      # for i, time in enumerate(time_frame):
+      #     y_start = i * ROW_HEIGHT
           
-          # Gap before the next event
-          y_offset += 35
+      #     draw.line([()])
+
+      today_name = dt.datetime.now().strftime("%A")
+
+      # for i, d in enumerate(days):
+      #   x_start = i * COLUMN_WIDTH
+      #   center_x = x_start + (COLUMN_WIDTH / 2)
+        
+      #   if i > 0: # border lines
+      #       draw.line([(x_start, HEADER_HEIGHT), (x_start, HEIGHT)], fill=CREAM, width=1)
+        
+      #   if d == today_name:
+      #     draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline=BLUE, fill=CREAM)
+      #     draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill=BLUE, font=font2, anchor="ms")
+      #   else:
+      #     draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline=CREAM)
+      #     draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill=CREAM, font=font2, anchor="ms")
+
+      #   y_offset = HEADER_HEIGHT + 45
+      #   day_events = events_by_day.get(d, [])
+
+        # for event in day_events:
+        #   # Stop drawing if we hit the bottom of the screen
+        #   if y_offset > HEIGHT - 20:
+        #       break
+              
+        #   # Draw Time (e.g., 12:05p)
+        #   if not event["is_all_day"]:
+        #       time_str = event["start"].replace(" AM", "a").replace(" PM", "p")
+        #       draw.text((center_x, y_offset), time_str, fill=CREAM, font=timeFont, anchor="ms")
+        #       y_offset += 15 # Small gap between time and title
+              
+        #   # Draw Summary (Truncated to fit column)
+        #   # With full screen, you likely have ~15-18 chars of room
+        #   summary = event["summary"]
+        #   if len(summary) > 18:
+        #       summary = summary[:16] + ".."
+              
+        #   draw.text((center_x, y_offset), summary, fill=CREAM, font=timeFont, anchor="ms")
+          
+        #   # Gap before the next event
+        #   y_offset += 35
 
       return img
 
