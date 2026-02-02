@@ -213,7 +213,7 @@ def render(width: int, height: int) -> Image.Image:
           draw.line([(x_start, HEADER_H), (x_start, height)], fill=TEXT_BLACK, width=1)
         if d == today_name: 
           # Draw the highlight rectangle
-          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_RED)
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_GREEN)
           draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=TEXT_BLACK, font=font2, anchor="ms")
         else:
           draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BG_WHITE, outline=TEXT_BLACK)
