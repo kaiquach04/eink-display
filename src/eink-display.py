@@ -12,6 +12,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from collections import defaultdict
+from inky.auto import auto
+
+try:
+   inky_display = auto()
+except ImportError:
+   inky_display = None
+   print("Library not found")
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 app = Flask(__name__)
@@ -40,29 +47,59 @@ SLATE = "#6E7387"    # cool gray-blue (neutral text, borders)
 DAY_DICT = {"Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
 TIME_DICT = {"all-day": 0, "08": 1, "09": 2, "10": 3, "11": 4, "12": 5, "01": 6, "02": 7, "03": 8, "04": 9, "05": 10 }
 
-def draw_rect(day, start_time, end_time, draw):
-  day_val = DAY_DICT[day]
 
-  print(start_time[3:5])
-
-  if (start_time == "All Day"):
-    time_startVal = 0
-    time_endVal = 0
-  else:
-    time_startVal = TIME_DICT[start_time[:2]]
-    time_endVal = TIME_DICT[end_time[:2]]
+def get_y_pos(time_str):
+    if time_str == "All Day":
+        return HEADER_H + ROW_H # Top row
     
+    # Parse the string 
+    time_part, period = time_str.split(' ')
+    hours, minutes = map(int, time_part.split(':'))
+    
+    # Convert to 24-hour format for easier math
+    if period == "PM" and hours != 12:
+        hours += 12
+    if period == "AM" and hours == 12:
+        hours = 0
+        
+    # Calculate minutes past your calendar start (e.g., 7:00 AM)
+    CALENDAR_START_HOUR = 8
+    total_minutes = (hours - CALENDAR_START_HOUR) * 60 + minutes
+    
+    base_offset = HEADER_H + (2 * ROW_H)
+    # Map to Pixels
+    # Every 60 minutes = 1 ROW_H. Plus 1 because the first row is 'All-day'
+    total_minutes = (hours - CALENDAR_START_HOUR) * 60 + minutes
+    y_pos = base_offset + (total_minutes / 60) * ROW_H
+    return y_pos
 
-  row_start = HEADER_H + (time_startVal * ROW_H) # 5 represents 12 pm (1 - 10, basically the following time row)
-  row_center = (row_start + (ROW_H / 2)) + ROW_H # center for the y value aligning it with the text
-  row_top_left = row_center - 15 # top left and bot right gives the y value points needed to properly fit within the rect
-  row_bot_right = row_center + 15
-  col_start = (day_val * DAY_W) + TIME_W # 0 represents SUN (0 (0 all-day) - 6, correlates to the days )
-  col_center = (col_start + (DAY_W / 2)) # center for the x value aligning it with the days text
-  col_top_left = col_center - 50 # top left and bot right gives the x value points needed to determine the proper length (depending on how long it should be)
-  col_bot_right = col_center + 50
+def draw_rect(day, start_time, end_time, summary, timeFont, draw):
+  day_val = DAY_DICT[day]
+  
+  # Calculate X (Columns)
+  col_start = (day_val * DAY_W) + TIME_W
+  col_margin = 5  # Padding so rectangles don't touch divider lines
+  x1 = col_start + col_margin
+  x2 = col_start + DAY_W - col_margin
 
-  draw.rounded_rectangle([col_top_left, row_top_left, col_bot_right, row_bot_right], radius=8, fill=SLATE, outline=CREAM)
+  # Calculate Y (Rows)
+  if start_time == "All Day":
+      row_start = HEADER_H + (0 * ROW_H)
+      row_center = (row_start + (ROW_H / 2)) + ROW_H
+      y1 = row_center - 15
+      y2 = row_center + 15
+  else:
+      y1 = get_y_pos(start_time)
+      y2 = get_y_pos(end_time)
+
+  # Draw the block
+  draw.rounded_rectangle([x1, y1, x2, y2], radius=8, fill=SLATE, outline=CREAM)
+  
+  # Draw text inside the block
+  # Center text between y1 and y2
+  text_y = (y1 + y2) / 2
+  text_x = (x1 + x2) / 2
+  draw.text((text_x, text_y), summary[:12], fill=CREAM, font=timeFont, anchor="mm")
   
 
 def format_event_time(time_str):
@@ -182,56 +219,8 @@ def render(width: int, height: int) -> Image.Image:
           if y_offset > height - 20:
             break
           
-          draw_rect(event["day"], event["start"], event["end"], draw)
-
-          summary = event["summary"]
-          if len(summary) > 18: # Limits the summary length
-            summary = summary[:16] + ".."
-          
-          draw.text((text_center_x, y_offset), summary, font=timeFont, fill=CREAM, anchor="ms")
-          y_offset += 35
+          draw_rect(event["day"], event["start"], event["end"], event["summary"], timeFont, draw)
       
-
-
-      # for i, d in enumerate(days):
-      #   x_start = i * COLUMN_WIDTH
-      #   center_x = x_start + (COLUMN_WIDTH / 2)
-        
-      #   if i > 0: # border lines
-      #       draw.line([(x_start, HEADER_HEIGHT), (x_start, HEIGHT)], fill=CREAM, width=1)
-        
-      #   if d == today_name:
-      #     draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline=BLUE, fill=CREAM)
-      #     draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill=BLUE, font=font2, anchor="ms")
-      #   else:
-      #     draw.rectangle([x_start, HEADER_HEIGHT, x_start + COLUMN_WIDTH, HEADER_HEIGHT + 30], outline=CREAM)
-      #     draw.text((center_x, HEADER_HEIGHT + 15), d[:3].upper(), fill=CREAM, font=font2, anchor="ms")
-
-      #   y_offset = HEADER_HEIGHT + 45
-      #   day_events = events_by_day.get(d, [])
-
-        # for event in day_events:
-        #   # Stop drawing if we hit the bottom of the screen
-        #   if y_offset > HEIGHT - 20:
-        #       break
-              
-        #   # Draw Time (e.g., 12:05p)
-        #   if not event["is_all_day"]:
-        #       time_str = event["start"].replace(" AM", "a").replace(" PM", "p")
-        #       draw.text((center_x, y_offset), time_str, fill=CREAM, font=timeFont, anchor="ms")
-        #       y_offset += 15 # Small gap between time and title
-              
-        #   # Draw Summary (Truncated to fit column)
-        #   # With full screen, you likely have ~15-18 chars of room
-        #   summary = event["summary"]
-        #   if len(summary) > 18:
-        #       summary = summary[:16] + ".."
-              
-        #   draw.text((center_x, y_offset), summary, fill=CREAM, font=timeFont, anchor="ms")
-          
-        #   # Gap before the next event
-        #   y_offset += 35
-
       return img
 
   except HttpError as error:
@@ -265,7 +254,7 @@ def index():
       const img = document.getElementById("screen");
       setInterval(() => {{
         img.src = "/render.png?t=" + Date.now(); // cache-bust
-      }}, 1000);
+      }}, 600000);
     </script>
   </body>
 </html>"""
@@ -273,6 +262,11 @@ def index():
 @app.get("/render.png")
 def render_png():
     img = render(WIDTH, HEIGHT)
+    if inky_display:
+       pal_img = img.convert("P", pallete=Image.ADAPTIVE, colors=7)
+
+       inky_display.set_image(pal_img)
+       inky_display.show()
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return Response(buf.getvalue(), mimetype="image/png")
