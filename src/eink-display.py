@@ -37,10 +37,33 @@ SAGE = "#8FAF9A"     # muted green (calm, natural accent)
 CLAY = "#C47A5A"     # soft terracotta (warm highlight / CTA)
 SLATE = "#6E7387"    # cool gray-blue (neutral text, borders)
 
+DAY_DICT = {"Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
+TIME_DICT = {"all-day": 0, "08": 1, "09": 2, "10": 3, "11": 4, "12": 5, "01": 6, "02": 7, "03": 8, "04": 9, "05": 10 }
 
-def draw_rect(day, start_time, end_time):
+def draw_rect(day, start_time, end_time, draw):
+  day_val = DAY_DICT[day]
+
+  print(start_time[3:5])
+
+  if (start_time == "All Day"):
+    time_startVal = 0
+    time_endVal = 0
+  else:
+    time_startVal = TIME_DICT[start_time[:2]]
+    time_endVal = TIME_DICT[end_time[:2]]
+    
+
+  row_start = HEADER_H + (time_startVal * ROW_H) # 5 represents 12 pm (1 - 10, basically the following time row)
+  row_center = (row_start + (ROW_H / 2)) + ROW_H # center for the y value aligning it with the text
+  row_top_left = row_center - 15 # top left and bot right gives the y value points needed to properly fit within the rect
+  row_bot_right = row_center + 15
+  col_start = (day_val * DAY_W) + TIME_W # 0 represents SUN (0 (0 all-day) - 6, correlates to the days )
+  col_center = (col_start + (DAY_W / 2)) # center for the x value aligning it with the days text
+  col_top_left = col_center - 50 # top left and bot right gives the x value points needed to determine the proper length (depending on how long it should be)
+  col_bot_right = col_center + 50
+
+  draw.rounded_rectangle([col_top_left, row_top_left, col_bot_right, row_bot_right], radius=8, fill=SLATE, outline=CREAM)
   
-  return ""
 
 def format_event_time(time_str):
   if not time_str:
@@ -115,17 +138,12 @@ def render(width: int, height: int) -> Image.Image:
       for event in weekly_list:
         events_by_day[event["day"]].append(event)
 
-
       days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
       time_frame = ["all-day", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm"]
-      day_dict = {"Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
-      time_dict = {"all-day": 0, "08am": 1, "09am": 2, "10am": 3, "11am": 4, "12pm": 5, "01pm": 6, "02pm": 7, "03pm": 8, "04pm": 9, "05pm": 10 }
-
       week_range = f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
 
       draw.text((20, 10), "Kai + Em Calendar", fill=CREAM, font=font2)
       draw.text((WIDTH - 20, 10), week_range, fill=CREAM, font=font2, anchor="ra")
-
       draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=CREAM, width=1) # Creates the vertical line for the time_frame
       
       for i, time in enumerate(time_frame): # Creates all of the rows necessary for time_frame
@@ -133,7 +151,6 @@ def render(width: int, height: int) -> Image.Image:
 
         if i > 0:
           draw.line([(0, h), (width, h)], fill=CREAM, width=1)
-
 
         text_center_y = (h + (ROW_H / 2)) + ROW_H 
         draw.text((TIME_W / 2, text_center_y), time, fill=CREAM, font=timeFont, anchor="mm") 
@@ -147,6 +164,7 @@ def render(width: int, height: int) -> Image.Image:
       for i, d in enumerate(days):
         x_start = (i * DAY_W) + TIME_W
         text_center_x = (x_start + (DAY_W / 2)) 
+
         if i > 0:
           draw.line([(x_start, HEADER_H), (x_start, height)], fill=CREAM, width=1)
         if d == today_name: 
@@ -164,7 +182,7 @@ def render(width: int, height: int) -> Image.Image:
           if y_offset > height - 20:
             break
           
-          draw_rect(event["day"], event["start"], event["end"])
+          draw_rect(event["day"], event["start"], event["end"], draw)
 
           summary = event["summary"]
           if len(summary) > 18: # Limits the summary length
@@ -173,16 +191,6 @@ def render(width: int, height: int) -> Image.Image:
           draw.text((text_center_x, y_offset), summary, font=timeFont, fill=CREAM, anchor="ms")
           y_offset += 35
       
-      row_start = HEADER_H + (5 * ROW_H) # 5 represents 12 pm (1 - 10, basically the following time row)
-      row_center = (row_start + (ROW_H / 2)) + ROW_H # center for the y value aligning it with the text
-      row_top_left = row_center - 15 # top left and bot right gives the y value points needed to properly fit within the rect
-      row_bot_right = row_center + 15
-      col_start = (0 * DAY_W) + TIME_W # 0 represents SUN (0 (0 all-day) - 6, correlates to the days )
-      col_center = (col_start + (DAY_W / 2)) # center for the x value aligning it with the days text
-      col_top_left = col_center - 50 # top left and bot right gives the x value points needed to determine the proper length (depending on how long it should be)
-      col_bot_right = col_center + 50
-
-      draw.rounded_rectangle([col_top_left, row_top_left, col_bot_right, row_bot_right], radius=8, fill=SLATE, outline=CREAM)
 
 
       # for i, d in enumerate(days):
