@@ -272,5 +272,8 @@ def render_png():
     return Response(buf.getvalue(), mimetype="image/png")
 
 if __name__ == "__main__":
+    with app.app_context():
+      print("Initial hardware starting")
+      render(WIDTH, HEIGHT)
     # debug=True auto-reloads server when you save code
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
