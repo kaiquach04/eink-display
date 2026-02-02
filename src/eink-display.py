@@ -16,6 +16,7 @@ from inky.auto import auto
 
 try:
    inky_display = auto()
+   print(f"Detected: {inky_display.colour} {inky_display.model}")
 except ImportError:
    inky_display = None
    print("Library not found")
@@ -263,10 +264,14 @@ def index():
 def render_png():
     img = render(WIDTH, HEIGHT)
     if inky_display:
-       pal_img = img.convert("P", palette=Image.ADAPTIVE, colors=7)
-
-       inky_display.set_image(pal_img)
-       inky_display.show()
+      img_for_display = img.convert("RGB")
+      
+      try:
+        inky_display.set_image(img_for_display)
+        inky_display.show()
+        print("Spectra 6 update triggered")
+      except:
+         print(f"update failed: {e}")
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return Response(buf.getvalue(), mimetype="image/png")
