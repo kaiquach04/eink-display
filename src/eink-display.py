@@ -41,9 +41,15 @@ DAY_W = 750 / 7
 BLUE = "#212842"
 CREAM = "#F0E7D5"
 MIDNIGHT = "#181C30"
-SAGE = "#8FAF9A"     # muted green (calm, natural accent)
-CLAY = "#C47A5A"     # soft terracotta (warm highlight / CTA)
-SLATE = "#6E7387"    # cool gray-blue (neutral text, borders)
+SAGE = "#8FAF9A"
+CLAY = "#C47A5A"
+SLATE = "#6E7387"
+
+BG_WHITE = "#FFFFFF"
+TEXT_BLACK = "#000000"
+ACCENT_RED = "#FF0000"
+ACCENT_BLUE = "#0000FF"
+ACCENT_GREEN = "#00FF00"
 
 DAY_DICT = {"Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
 TIME_DICT = {"all-day": 0, "08": 1, "09": 2, "10": 3, "11": 4, "12": 5, "01": 6, "02": 7, "03": 8, "04": 9, "05": 10 }
@@ -94,13 +100,13 @@ def draw_rect(day, start_time, end_time, summary, timeFont, draw):
       y2 = get_y_pos(end_time)
 
   # Draw the block
-  draw.rounded_rectangle([x1, y1, x2, y2], radius=8, fill=SLATE, outline=CREAM)
+  draw.rounded_rectangle([x1, y1, x2, y2], radius=8, fill=ACCENT_BLUE, outline=CREAM)
   
   # Draw text inside the block
   # Center text between y1 and y2
   text_y = (y1 + y2) / 2
   text_x = (x1 + x2) / 2
-  draw.text((text_x, text_y), summary[:12], fill=CREAM, font=timeFont, anchor="mm")
+  draw.text((text_x, text_y), summary[:12], fill=BG_WHITE, font=timeFont, anchor="mm")
   
 
 def format_event_time(time_str):
@@ -165,9 +171,9 @@ def render(width: int, height: int) -> Image.Image:
           "is_all_day": "dateTime" not in event["start"]
         })
 
-      img = Image.new("RGB", (width, height), MIDNIGHT) # Creates the background
+      img = Image.new("RGB", (width, height), BG_WHITE) # Creates the background
       draw = ImageDraw.Draw(img)
-      draw.rectangle([0, 0, width, HEADER_H], fill=BLUE) # Header
+      draw.rectangle([0, 0, width, HEADER_H], fill=TEXT_BLACK) # Header
       font_path = FredokaOne
       font2 = ImageFont.truetype(font_path, size=15) # font size for header
       timeFont = ImageFont.truetype(font_path, size=10) # Font size for main calendar
@@ -180,22 +186,22 @@ def render(width: int, height: int) -> Image.Image:
       time_frame = ["all-day", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm"]
       week_range = f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
 
-      draw.text((20, 10), "Kai + Em Calendar", fill=CREAM, font=font2)
-      draw.text((WIDTH - 20, 10), week_range, fill=CREAM, font=font2, anchor="ra")
-      draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=CREAM, width=1) # Creates the vertical line for the time_frame
+      draw.text((20, 10), "Kai + Em Calendar", fill=BG_WHITE, font=font2)
+      draw.text((WIDTH - 20, 10), week_range, fill=BG_WHITE, font=font2, anchor="ra")
+      draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=TEXT_BLACK, width=1) # Creates the vertical line for the time_frame
       
       for i, time in enumerate(time_frame): # Creates all of the rows necessary for time_frame
         h = (i * ROW_H) + HEADER_H 
 
         if i > 0:
-          draw.line([(0, h), (width, h)], fill=CREAM, width=1)
+          draw.line([(0, h), (width, h)], fill=TEXT_BLACK, width=1)
 
         text_center_y = (h + (ROW_H / 2)) + ROW_H 
-        draw.text((TIME_W / 2, text_center_y), time, fill=CREAM, font=timeFont, anchor="mm") 
+        draw.text((TIME_W / 2, text_center_y), time, fill=TEXT_BLACK, font=timeFont, anchor="mm") 
 
       # Create bottom line for row
       bottom_line_y = HEADER_H + (11 * ROW_H)
-      draw.line([(0, bottom_line_y), (width, bottom_line_y)], fill=CREAM, width=1) 
+      draw.line([(0, bottom_line_y), (width, bottom_line_y)], fill=TEXT_BLACK, width=1) 
 
       today_name = dt.datetime.now().strftime("%A")
       # Creates the rest of the vertical lines for the following days
@@ -204,14 +210,14 @@ def render(width: int, height: int) -> Image.Image:
         text_center_x = (x_start + (DAY_W / 2)) 
 
         if i > 0:
-          draw.line([(x_start, HEADER_H), (x_start, height)], fill=CREAM, width=1)
+          draw.line([(x_start, HEADER_H), (x_start, height)], fill=TEXT_BLACK, width=1)
         if d == today_name: 
           # Draw the highlight rectangle
-          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=CREAM)
-          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=BLUE, font=font2, anchor="ms")
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=TEXT_BLACK)
+          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=BG_WHITE, font=font2, anchor="ms")
         else:
-          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BLUE, outline=CREAM)
-          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=CREAM, font=font2, anchor="ms")
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BG_WHITE, outline=CREAM)
+          draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=TEXT_BLACK, font=font2, anchor="ms")
 
         y_offset = HEADER_H + 45
         day_events = events_by_day.get(d, [])
