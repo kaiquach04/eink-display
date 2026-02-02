@@ -20,14 +20,14 @@ CALENDAR_ID = os.getenv("KAI_EM_CALENDAR_ID")
 
 # holy measurements
 WIDTH, HEIGHT = 800, 480  # Inky Impression 7.3"
-HEADER_H = 50
+HEADER_H = 35
 TIME_W = 50
 GRID_Y0 = 50 #TOP OF GRID AREA
 GRID_H = HEIGHT - HEADER_H
 DAY_X0 = 50 #START OF DAY AREA
 DAY_W_TOTAL = WIDTH - TIME_W
 
-ROW_H = 430 / 16
+ROW_H = 445 / 12
 DAY_W = 750 / 7
 
 BLUE = "#212842"
@@ -36,6 +36,11 @@ MIDNIGHT = "#181C30"
 SAGE = "#8FAF9A"     # muted green (calm, natural accent)
 CLAY = "#C47A5A"     # soft terracotta (warm highlight / CTA)
 SLATE = "#6E7387"    # cool gray-blue (neutral text, borders)
+
+
+def draw_rect(day, start_time, end_time):
+  
+  return ""
 
 def format_event_time(time_str):
   if not time_str:
@@ -103,8 +108,8 @@ def render(width: int, height: int) -> Image.Image:
       draw = ImageDraw.Draw(img)
       draw.rectangle([0, 0, width, HEADER_H], fill=BLUE) # Header
       font_path = FredokaOne
-      font2 = ImageFont.truetype(font_path, size=15)
-      timeFont = ImageFont.truetype(font_path, size=10)
+      font2 = ImageFont.truetype(font_path, size=15) # font size for header
+      timeFont = ImageFont.truetype(font_path, size=10) # Font size for main calendar
 
       events_by_day = defaultdict(list)
       for event in weekly_list:
@@ -112,11 +117,14 @@ def render(width: int, height: int) -> Image.Image:
 
 
       days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-      time_frame = ["all-day", "7am", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm", "8pm"]
+      time_frame = ["all-day", "8am", "9am", "10am", "11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm"]
+      day_dict = {"Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
+      time_dict = {"all-day": 0, "08am": 1, "09am": 2, "10am": 3, "11am": 4, "12pm": 5, "01pm": 6, "02pm": 7, "03pm": 8, "04pm": 9, "05pm": 10 }
+
       week_range = f"{start_of_week.strftime('%b %d')} - {end_of_week.strftime('%b %d')}"
 
-      draw.text((20, 15), "Kai + Em Calendar", fill=CREAM, font=font2)
-      draw.text((WIDTH - 20, 15), week_range, fill=CREAM, font=font2, anchor="ra")
+      draw.text((20, 10), "Kai + Em Calendar", fill=CREAM, font=font2)
+      draw.text((WIDTH - 20, 10), week_range, fill=CREAM, font=font2, anchor="ra")
 
       draw.line([(TIME_W, HEADER_H), (TIME_W, height)], fill=CREAM, width=1) # Creates the vertical line for the time_frame
       
@@ -131,11 +139,11 @@ def render(width: int, height: int) -> Image.Image:
         draw.text((TIME_W / 2, text_center_y), time, fill=CREAM, font=timeFont, anchor="mm") 
 
       # Create bottom line for row
-      bottom_line_y = HEADER_H + (15 * ROW_H)
+      bottom_line_y = HEADER_H + (11 * ROW_H)
       draw.line([(0, bottom_line_y), (width, bottom_line_y)], fill=CREAM, width=1) 
 
       today_name = dt.datetime.now().strftime("%A")
-      # Creates the rest of the vertical lines for days
+      # Creates the rest of the vertical lines for the following days
       for i, d in enumerate(days):
         x_start = (i * DAY_W) + TIME_W
         text_center_x = (x_start + (DAY_W / 2)) 
@@ -152,16 +160,29 @@ def render(width: int, height: int) -> Image.Image:
         y_offset = HEADER_H + 45
         day_events = events_by_day.get(d, [])
 
-        for event in day_events:
+        for event in day_events: # Loops through the following events for correlated day in the loop
           if y_offset > height - 20:
             break
+          
+          draw_rect(event["day"], event["start"], event["end"])
 
-          if not event["is_all_day"]:
-            time_str = f"{event["start"].replace(" AM", "a").replace(" PM", "p")} - {event["end"].replace(" AM", "a").replace(" PM", "p")}"
-            draw.text((text_center_x, y_offset), time_str, font=timeFont, fill=CREAM, anchor="ms")
-            y_offset += 15
+          summary = event["summary"]
+          if len(summary) > 18: # Limits the summary length
+            summary = summary[:16] + ".."
           
-          
+          draw.text((text_center_x, y_offset), summary, font=timeFont, fill=CREAM, anchor="ms")
+          y_offset += 35
+      
+      row_start = HEADER_H + (5 * ROW_H) # 5 represents 12 pm (1 - 10, basically the following time row)
+      row_center = (row_start + (ROW_H / 2)) + ROW_H # center for the y value aligning it with the text
+      row_top_left = row_center - 15 # top left and bot right gives the y value points needed to properly fit within the rect
+      row_bot_right = row_center + 15
+      col_start = (0 * DAY_W) + TIME_W # 0 represents SUN (0 (0 all-day) - 6, correlates to the days )
+      col_center = (col_start + (DAY_W / 2)) # center for the x value aligning it with the days text
+      col_top_left = col_center - 50 # top left and bot right gives the x value points needed to determine the proper length (depending on how long it should be)
+      col_bot_right = col_center + 50
+
+      draw.rounded_rectangle([col_top_left, row_top_left, col_bot_right, row_bot_right], radius=8, fill=SLATE, outline=CREAM)
 
 
       # for i, d in enumerate(days):
