@@ -12,14 +12,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from collections import defaultdict
-from inky.auto import auto
 
-try:
-   inky_display = auto()
-   print(f"Detected: {inky_display.colour} {inky_display.resolution}")
-except ImportError:
-   inky_display = None
-   print("Library not found")
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 app = Flask(__name__)
@@ -213,7 +206,7 @@ def render(width: int, height: int) -> Image.Image:
           draw.line([(x_start, HEADER_H), (x_start, height)], fill=TEXT_BLACK, width=1)
         if d == today_name: 
           # Draw the highlight rectangle
-          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_GREEN)
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_GREEN, outline=TEXT_BLACK)
           draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=TEXT_BLACK, font=font2, anchor="ms")
         else:
           draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BG_WHITE, outline=TEXT_BLACK)
@@ -261,35 +254,19 @@ def index():
       const img = document.getElementById("screen");
       setInterval(() => {{
         img.src = "/render.png?t=" + Date.now(); // cache-bust
-      }}, 600000);
+      }}, 1000);
     </script>
   </body>
 </html>"""
 
-def update_hardware():
-    """Generates the image and pushes it to the physical screen."""
-    print("Updating physical display...")
-    img = render(WIDTH, HEIGHT)
-    if inky_display:
-        try:
-            # Spectra 6 requires clean RGB for its internal palette mapping
-            display_img = img.convert("RGB")
-            inky_display.set_image(display_img)
-            inky_display.show()
-            print("Spectra 6 hardware refresh successful.")
-        except Exception as e:
-            print(f"Hardware refresh failed: {e}")
-    return img
 
 @app.get("/render.png")
 def render_png():
-    # Use the helper
-    img = update_hardware()
+    img = render(WIDTH, HEIGHT)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return Response(buf.getvalue(), mimetype="image/png")
 
 if __name__ == "__main__":
-    # Now this will actually trigger the screen on startup
-    update_hardware()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    render(WIDTH, HEIGHT)
+    app.run(host="127.0.0.1", port=5000, debug=True)
