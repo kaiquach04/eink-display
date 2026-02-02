@@ -260,25 +260,30 @@ def index():
   </body>
 </html>"""
 
-@app.get("/render.png")
-def render_png():
+def update_hardware():
+    """Generates the image and pushes it to the physical screen."""
+    print("Updating physical display...")
     img = render(WIDTH, HEIGHT)
     if inky_display:
-      img_for_display = img.convert("RGB")
-      
-      try:
-        inky_display.set_image(img_for_display)
-        inky_display.show()
-        print("Spectra 6 update triggered")
-      except:
-         print(f"update failed: {e}")
+        try:
+            # Spectra 6 requires clean RGB for its internal palette mapping
+            display_img = img.convert("RGB")
+            inky_display.set_image(display_img)
+            inky_display.show()
+            print("Spectra 6 hardware refresh successful.")
+        except Exception as e:
+            print(f"Hardware refresh failed: {e}")
+    return img
+
+@app.get("/render.png")
+def render_png():
+    # Use the helper
+    img = update_hardware()
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return Response(buf.getvalue(), mimetype="image/png")
 
 if __name__ == "__main__":
-    with app.app_context():
-      print("Initial hardware starting")
-      render(WIDTH, HEIGHT)
-    # debug=True auto-reloads server when you save code
+    # Now this will actually trigger the screen on startup
+    update_hardware()
     app.run(host="0.0.0.0", port=5000, debug=False)
