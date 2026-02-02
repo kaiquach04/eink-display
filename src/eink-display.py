@@ -263,7 +263,7 @@ def index():
 def render_png():
     img = render(WIDTH, HEIGHT)
     if inky_display:
-       pal_img = img.convert("P", pallete=Image.ADAPTIVE, colors=7)
+       pal_img = img.convert("P", palette=Image.ADAPTIVE, colors=7)
 
        inky_display.set_image(pal_img)
        inky_display.show()
@@ -273,4 +273,4 @@ def render_png():
 
 if __name__ == "__main__":
     # debug=True auto-reloads server when you save code
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=False)
