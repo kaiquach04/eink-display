@@ -16,7 +16,7 @@ from inky.auto import auto
 
 try:
    inky_display = auto()
-   print(f"Detected: {inky_display.colour} {inky_display.model}")
+   print(f"Detected: {inky_display.colour} {inky_display.resolution}")
 except ImportError:
    inky_display = None
    print("Library not found")
