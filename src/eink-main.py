@@ -51,8 +51,8 @@ def update_display():
 if __name__ == "__main__":
     update_display()
     while True:
-        events = request.read_edge_events(dt.timedelta(seconds=1))
-        if events:
+        events = request.wait_edge_events(dt.timedelta(seconds=1))
+        if event is not False:
             for event in events:
                 offset = event.line_offset
                 if offset == OFFSETS[0]:
