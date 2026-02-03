@@ -1,5 +1,6 @@
 # eink_main.py
 import time
+import datetime as dt
 from inky.auto import auto
 from calendar_logic import render as render_calendar
 from calendar_logic import WIDTH, HEIGHT
@@ -40,6 +41,7 @@ def update_display():
     elif current_mode == "spotify":
         #img = render_spotify(WIDTH, HEIGHT)
         print("Spotify mode selected (logic not done)")
+        return
 
     display_img = img.convert("RGB")
     inky_display.set_image(display_img)
