@@ -13,7 +13,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from collections import defaultdict
 
-
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 app = Flask(__name__)
 load_dotenv()
@@ -206,7 +205,7 @@ def render(width: int, height: int) -> Image.Image:
           draw.line([(x_start, HEADER_H), (x_start, height)], fill=TEXT_BLACK, width=1)
         if d == today_name: 
           # Draw the highlight rectangle
-          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_GREEN, outline=TEXT_BLACK)
+          draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=ACCENT_GREEN)
           draw.text((text_center_x, HEADER_H + 20), d[:3].upper(), fill=TEXT_BLACK, font=font2, anchor="ms")
         else:
           draw.rectangle([x_start, HEADER_H, x_start + DAY_W, HEADER_H + ROW_H], fill=BG_WHITE, outline=TEXT_BLACK)
@@ -226,47 +225,10 @@ def render(width: int, height: int) -> Image.Image:
   except HttpError as error:
       print("An error occurred:", error)
 
-@app.get("/")
-def index():
-    return f"""<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>E-ink Preview</title>
-    <style>
-      body {{ font-family: system-ui, sans-serif; padding: 16px; }}
-      .frame {{ display: inline-block; border: 1px solid #ccc; padding: 8px; }}
-      img {{ image-rendering: pixelated; }}
-      .hint {{ color: #666; margin-top: 8px; }}
-    </style>
-  </head>
-  <body>
-    <h2>E-ink Live Preview (800×480)</h2>
-    <div class="frame">
-      <img id="screen" width="{WIDTH}" height="{HEIGHT}" src="/render.png?t={time.time()}" />
-    </div>
-    <div class="hint">
-      Auto-refreshes every 1s. Edit <code>render()</code> and refresh the page if needed.
-    </div>
-
-    <script>
-      const img = document.getElementById("screen");
-      setInterval(() => {{
-        img.src = "/render.png?t=" + Date.now(); // cache-bust
-      }}, 1000);
-    </script>
-  </body>
-</html>"""
-
-
-@app.get("/render.png")
-def render_png():
+def update_calendar():
+    print("Updating physical display...")
     img = render(WIDTH, HEIGHT)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return Response(buf.getvalue(), mimetype="image/png")
+    return img
 
 if __name__ == "__main__":
-    render(WIDTH, HEIGHT)
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    update_calendar()
