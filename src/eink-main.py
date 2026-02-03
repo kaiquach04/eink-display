@@ -51,7 +51,7 @@ def update_display():
 if __name__ == "__main__":
     update_display()
     while True:
-        events = request.wait_edge_events(dt.timedelta(seconds=1))
+        events = request.read_edge_events(dt.timedelta(seconds=1))
         if events:
             for event in events:
                 offset = event.line_offset
@@ -59,10 +59,12 @@ if __name__ == "__main__":
                     print("Button A: Switching to Calendar")
                     current_mode = "calendar"
                     update_display()
+                    print("Refresh finished")
                 elif offset == OFFSETS[1]:
                     print("Button B: Switching to Spotify")
                     current_mode = "spotify"
                     update_display()
+                    print("Refresh finished")
         if time.time() - last_refresh_time > REFRESH_INTERVAL:
             print("Timer triggered: refresh started")
             update_display()
