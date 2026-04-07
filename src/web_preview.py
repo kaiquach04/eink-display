@@ -3,6 +3,7 @@ import datetime as dt
 import io
 import time
 from flask import Flask, Response
+from spotify_logic import render as render_spotify
 from calendar_logic import render, WIDTH, HEIGHT
 app = Flask(__name__)
 
@@ -39,6 +40,12 @@ def index():
   </body>
 </html>"""
 
+@app.route("/spotify.png")
+def spotify_png():
+    img = render_spotify(WIDTH, HEIGHT)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Response(buf.getvalue(), mimetype="image/png")
 
 @app.route("/render.png")
 def render_png():

@@ -5,7 +5,7 @@ from calendar_logic import render as render_calendar
 from calendar_logic import WIDTH, HEIGHT
 import gpiod
 import gpiodevice
-# from spotify_logic import render as render_spotify
+from spotify_logic import render as render_spotify
 from gpiod.line import Bias, Direction, Edge
 
 SW_A = 5
@@ -38,7 +38,7 @@ def update_display():
     if current_mode == "calendar":
         img = render_calendar(WIDTH,HEIGHT)
     elif current_mode == "spotify":
-        #img = render_spotify(WIDTH, HEIGHT)
+        img = render_spotify(WIDTH, HEIGHT)
         print("Spotify mode selected (logic not done)")
         return
 
