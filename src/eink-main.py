@@ -39,7 +39,6 @@ def update_display():
         img = render_calendar(WIDTH,HEIGHT)
     elif current_mode == "spotify":
         img = render_spotify(WIDTH, HEIGHT)
-        return
 
     display_img = img.convert("RGB")
     inky_display.set_image(display_img)
